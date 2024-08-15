@@ -29,4 +29,4 @@ mvn spring-boot:run
 Після запуску додаток буде доступний за адресою: http://localhost:8080/members
 
 ## Swagger UI
-Ви можете відкрити Swagger UI за наступною адресою: http://localhost:8080/swagger-ui.html
+Ви можете відкрити Swagger UI за наступною адресою: http://localhost:8080/swagger-ui/index.html
