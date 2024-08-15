@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Member Details</title>
+</head>
+<body>
+<h1>Member Details</h1>
+<p><strong>Name:</strong> <span th:text="${member.name}">Name</span></p>
+<p><strong>Membership Date:</strong> <span th:text="${member.membershipDate}">Date</span></p>
+<a th:href="@{/members}">Back to list</a>
+</body>
+</html>

@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Members List</title>
+</head>
+<body>
+<h1>All Members</h1>
+<a href="/members/new">Create New Member</a>
+<ul>
+    <li th:each="member : ${members}">
+        <a th:href="@{/members/{id}(id=${member.id})}" th:text="${member.name}">Member Name</a>
+        <a th:href="@{/members/{id}/edit(id=${member.id})}">Edit</a>
+        <form th:action="@{/members/{id}/delete(id=${member.id})}" method="post" style="display:inline;">
+            <button type="submit">Delete</button>
+        </form>
+    </li>
+</ul>
+</body>
+</html>
