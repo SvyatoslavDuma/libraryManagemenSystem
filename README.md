@@ -24,7 +24,11 @@ git clone https://github.com/SvyatoslavDuma/libraryManagemenSystem.git
 
 ## Запуск проекту
 Запуск проекту здійснюється за допомогою Maven. Переконайтеся, що ви перебуваєте в кореневій папці проекту, потім виконайте команду:
-mvn spring-boot:run
+mvn clean install
+
+Після цього виконайте команду: 
+ java -jar target/library-management-0.0.1-SNAPSHOT.jar
+
 
 Після запуску додаток буде доступний за адресою: http://localhost:8080/members
 
