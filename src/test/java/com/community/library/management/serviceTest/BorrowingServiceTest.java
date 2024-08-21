@@ -1,5 +1,9 @@
 package com.community.library.management.serviceTest;
 
+import com.community.library.management.exception.BookIsNotAvailableException;
+import com.community.library.management.exception.BookNotFoundException;
+import com.community.library.management.exception.MaxLimitException;
+import com.community.library.management.exception.MemberNotFoundException;
 import com.community.library.management.model.Book;
 import com.community.library.management.model.BorrowedBook;
 import com.community.library.management.model.Member;
@@ -42,13 +46,14 @@ public class BorrowingServiceTest {
 
     @MockBean
     private BorrowedBookRepository borrowedBookRepository;
+
     @Value("${library.member.max-borrow-limit}")
     private int maxBorrowLimit;
 
     private static Stream<Arguments> provideBorrowBookTestCases() {
         return Stream.of(
                 Arguments.of(new Book("Test Book", "Test Author", 3), createMemberWithBorrowedBooks(0), 2, null),
-                Arguments.of(null, createMemberWithBorrowedBooks(0), 0, "Book not found"),
+                Arguments.of(null, createMemberWithBorrowedBooks(0), 0, "Book with this ID not found"),
                 Arguments.of(new Book("Test Book", "Test Author", 0), createMemberWithBorrowedBooks(0), 0, "Book is not available for borrowing"),
                 Arguments.of(new Book("Test Book", "Test Author", 5), createMemberWithBorrowedBooks(10), 0, "Member has reached the borrow limit")
         );
@@ -75,18 +80,28 @@ public class BorrowingServiceTest {
 
         if (expectedExceptionMessage == null) {
             borrowingService.borrowBook(1L, 1L);
+
             assert book != null;
             assertEquals(expectedBookAmount, book.getAmount());
             verify(bookRepository, times(1)).save(book);
             verify(borrowedBookRepository, times(1)).save(any(BorrowedBook.class));
         } else {
-            IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
+            Exception exception = assertThrows(Exception.class, () -> {
                 borrowingService.borrowBook(1L, 1L);
             });
+
+            if (expectedExceptionMessage.equals("Book with this ID not found")) {
+                assertInstanceOf(BookNotFoundException.class, exception);
+            } else if (expectedExceptionMessage.equals("Book is not available for borrowing")) {
+                assertInstanceOf(BookIsNotAvailableException.class, exception);
+            } else if (expectedExceptionMessage.equals("Member has reached the borrow limit")) {
+                assertInstanceOf(MaxLimitException.class, exception);
+            }
 
             assertEquals(expectedExceptionMessage, exception.getMessage());
         }
     }
+
 
     @Test
     public void testBorrowBookSuccess() {
@@ -112,11 +127,11 @@ public class BorrowingServiceTest {
     public void testBorrowBookBookNotFound() {
         when(bookRepository.findById(1L)).thenReturn(Optional.empty());
 
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
+        BookNotFoundException exception = assertThrows( BookNotFoundException.class, () -> {
             borrowingService.borrowBook(1L, 1L);
         });
 
-        assertEquals("Book not found", exception.getMessage());
+        assertEquals("Book with this ID not found", exception.getMessage());
     }
     @Test
     public void testBorrowBookMemberNotFound() {
@@ -125,7 +140,7 @@ public class BorrowingServiceTest {
         when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
         when(memberRepository.findById(1L)).thenReturn(Optional.empty());
 
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
+        MemberNotFoundException exception = assertThrows(MemberNotFoundException.class, () -> {
             borrowingService.borrowBook(1L, 1L);
         });
 
@@ -141,7 +156,7 @@ public class BorrowingServiceTest {
         when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
         when(memberRepository.findById(1L)).thenReturn(Optional.of(member));
 
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
+        MaxLimitException exception = assertThrows(MaxLimitException.class, () -> {
             borrowingService.borrowBook(1L, 1L);
         });
 
@@ -159,7 +174,7 @@ public class BorrowingServiceTest {
 
         when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
 
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
+        BookIsNotAvailableException exception = assertThrows(BookIsNotAvailableException.class, () -> {
             borrowingService.borrowBook(1L, 1L);
         });
 

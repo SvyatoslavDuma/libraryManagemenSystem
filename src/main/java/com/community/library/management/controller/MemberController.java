@@ -1,6 +1,7 @@
 package com.community.library.management.controller;
 
 import com.community.library.management.dto.MemberDTO;
+import com.community.library.management.mapper.MemberMapper;
 import com.community.library.management.model.Member;
 import com.community.library.management.service.MemberService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,52 +11,57 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
 import java.util.List;
-import java.util.Optional;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/members")
 public class MemberController {
 
+
+    private final MemberService memberService;
+    private final MemberMapper memberMapper;
+
     @Autowired
-    private MemberService memberService;
+    public MemberController(MemberService memberService, MemberMapper memberMapper) {
+        this.memberService = memberService;
+        this.memberMapper = memberMapper;
+    }
 
     @GetMapping
-    public ResponseEntity<List<Member>> getAllMembers() {
+    public ResponseEntity<List<MemberDTO>> getAllMembers() {
         List<Member> members = memberService.findAll();
-        return new ResponseEntity<>(members, HttpStatus.OK);
+        List<MemberDTO> memberDTOs = members.stream()
+                .map(memberMapper::toDTO)
+                .collect(Collectors.toList());
+        return new ResponseEntity<>(memberDTOs, HttpStatus.OK);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Member> getMemberById(@PathVariable Long id) {
-        Optional<Member> member = memberService.findById(id);
-        return member.map(value -> new ResponseEntity<>(value, HttpStatus.OK))
-                .orElseGet(() -> new ResponseEntity<>(HttpStatus.NOT_FOUND));
+    public ResponseEntity<MemberDTO> getMemberById(@PathVariable Long id) {
+        Member member = memberService.findById(id);
+        return new  ResponseEntity<>(memberMapper.toDTO(member), HttpStatus.OK);
     }
 
     @PostMapping
-    public ResponseEntity<Member> createMember(@Valid @RequestBody Member member) {
-        Member savedMember = memberService.createMember(member);
-        return new ResponseEntity<>(savedMember, HttpStatus.CREATED);
+    public ResponseEntity<MemberDTO> createMember(@Valid @RequestBody MemberDTO memberDTO) {
+        Member savedMember =  memberService.createMember(memberDTO);
+        return new ResponseEntity<>(memberMapper.toDTO(savedMember), HttpStatus.CREATED);
     }
 
     @PatchMapping("/{id}/name")
-    public ResponseEntity<Member> updateUserName(
+    public ResponseEntity<MemberDTO> updateUserName(
             @PathVariable Long id,
-            @RequestBody MemberDTO memberDTO) {
+            @RequestBody @Valid MemberDTO memberDTO) {
 
-        Member updatedMember = memberService.updateMember(id, memberDTO);
-        return ResponseEntity.ok(updatedMember);
+         memberService.updateMember(id, memberDTO);
+        return new ResponseEntity<>(HttpStatus.OK);
     }
 
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteMember(@PathVariable Long id) {
-        try {
             memberService.deleteMember(id);
             return new ResponseEntity<>(HttpStatus.NO_CONTENT);
-        } catch (IllegalArgumentException e) {
-            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
-        }
     }
 
 }

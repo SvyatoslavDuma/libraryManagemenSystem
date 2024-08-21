@@ -13,8 +13,12 @@ import java.util.List;
 @RequestMapping("/api/borrow")
 public class BorrowingController {
 
+
+    private final BorrowingService borrowingService;
     @Autowired
-    private BorrowingService borrowingService;
+    public BorrowingController (BorrowingService borrowingService){
+        this.borrowingService=borrowingService;
+    }
 
     @PostMapping("/borrow")
     public ResponseEntity<Void> borrowBook(@RequestParam Long memberId, @RequestParam Long bookId) {

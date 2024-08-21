@@ -3,11 +3,11 @@ package com.community.library.management.serviceTest;
 import com.community.library.management.dto.BookDTO;
 import com.community.library.management.exception.BookNotDeletableException;
 import com.community.library.management.exception.BookNotFoundException;
+import com.community.library.management.mapper.BookMapper;
 import com.community.library.management.model.Book;
 import com.community.library.management.repository.BookRepository;
 import com.community.library.management.repository.BorrowedBookRepository;
 import com.community.library.management.service.BookService;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -15,7 +15,6 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Arrays;
@@ -29,6 +28,8 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 public class BookServiceTest {
+    @Mock
+    private BookMapper bookMapper;
 
     @Mock
     private BookRepository bookRepository;
@@ -39,10 +40,6 @@ public class BookServiceTest {
     @InjectMocks
     private BookService bookService;
 
-    @BeforeEach
-    public void setUp() {
-        MockitoAnnotations.openMocks(this);
-    }
     private static Stream<Arguments> provideBooksForSaving() {
         return Stream.of(
                 Arguments.of("New Title", "New Author", 10, 10, true),
@@ -91,19 +88,20 @@ public class BookServiceTest {
         Book book = new Book("Test Title", "Test Author", 1);
         when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
 
-        Optional<Book> result = bookService.findById(1L);
+        Book result = bookService.findById(1L);
 
-        assertTrue(result.isPresent());
-        assertEquals("Test Title", result.get().getTitle());
+        assertEquals(result, book);
+        assertEquals("Test Title", result.getTitle());
         verify(bookRepository, times(1)).findById(1L);
     }
     @Test
     void testFindByIdNotFound() {
         when(bookRepository.findById(1L)).thenReturn(Optional.empty());
 
-        Optional<Book> result = bookService.findById(1L);
+        assertThrows(BookNotFoundException.class, () -> {
+            bookService.findById(1L);
+        });
 
-        assertFalse(result.isPresent());
         verify(bookRepository, times(1)).findById(1L);
     }
     @Test
@@ -155,19 +153,27 @@ public class BookServiceTest {
     }
     @Test
     public void testUpdateBookSuccess() {
-        Book book = new Book("Old Title", "Old Author", 10);
-        when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
+
+        Book existingBook = new Book("Old Title", "Old Author", 10);
+        when(bookRepository.findById(1L)).thenReturn(Optional.of(existingBook));
 
         BookDTO bookDTO = new BookDTO("New Title", "New Author", 5);
+        Book updatedBook = new Book("New Title", "New Author", 5);
 
-        when(bookRepository.save(any(Book.class))).thenReturn(book);
+        when(bookMapper.toEntity(bookDTO)).thenReturn(updatedBook);
+        when(bookRepository.save(any(Book.class))).thenReturn(updatedBook);
 
-        Book updatedBook = bookService.updateBook(1L, bookDTO);
+        Book result = bookService.updateBook(1L, bookMapper.toEntity(bookDTO));
 
-        assertEquals("New Title", updatedBook.getTitle());
-        assertEquals("New Author", updatedBook.getAuthor());
-        assertEquals(5, updatedBook.getAmount());
-        verify(bookRepository, times(1)).save(book);
+        assertEquals("New Title", result.getTitle());
+        assertEquals("New Author", result.getAuthor());
+        assertEquals(5, result.getAmount());
+
+        verify(bookRepository, times(1)).save(argThat(book ->
+                book.getTitle().equals("New Title") &&
+                        book.getAuthor().equals("New Author") &&
+                        book.getAmount() == 5
+        ));
     }
 
     @Test
@@ -176,11 +182,12 @@ public class BookServiceTest {
 
         BookDTO bookDTO = new BookDTO("New Title", "New Author", 5);
         assertThrows(BookNotFoundException.class, () -> {
-            bookService.updateBook(1L, bookDTO);
+            bookService.updateBook(1L, bookMapper.toEntity(bookDTO));
         });
 
         verify(bookRepository, never()).save(any(Book.class));
     }
+
     @Test
     void testDeleteBookNotFound() {
         when(bookRepository.findById(1L)).thenReturn(Optional.empty());

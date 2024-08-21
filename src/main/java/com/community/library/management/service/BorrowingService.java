@@ -1,6 +1,6 @@
 package com.community.library.management.service;
 
-import com.community.library.management.exception.MemberNotFoundException;
+import com.community.library.management.exception.*;
 import com.community.library.management.model.Book;
 import com.community.library.management.model.BorrowedBook;
 import com.community.library.management.model.Member;
@@ -17,28 +17,32 @@ import java.util.List;
 @Service
 public class BorrowingService {
 
-    @Autowired
-    private BookRepository bookRepository;
+    private final BookRepository bookRepository;
+    private final MemberRepository memberRepository;
+    private final BorrowedBookRepository borrowedBookRepository;
 
     @Autowired
-    private MemberRepository memberRepository;
-
-    @Autowired
-    private BorrowedBookRepository borrowedBookRepository;
+    public BorrowingService(BookRepository bookRepository, MemberRepository memberRepository, BorrowedBookRepository borrowedBookRepository) {
+        this.bookRepository = bookRepository;
+        this.memberRepository = memberRepository;
+        this.borrowedBookRepository = borrowedBookRepository;
+    }
 
     @Value("${library.member.max-borrow-limit}")
     private int maxBorrowLimit;
 
+
+
     public void borrowBook(Long memberId, Long bookId) {
         Book book = bookRepository.findById(bookId)
-                .orElseThrow(() -> new IllegalArgumentException("Book not found"));
+                .orElseThrow(BookNotFoundException::new);
 
         if (book.getAmount() <= 0) {
-            throw new IllegalArgumentException("Book is not available for borrowing");
+            throw new BookIsNotAvailableException();
         }
 
         Member member = memberRepository.findById(memberId)
-                .orElseThrow(() -> new IllegalArgumentException("Member not found"));
+                .orElseThrow(MemberNotFoundException::new);
 
         if (member.getBorrowedBooks() == null) {
             member.setBorrowedBooks(new ArrayList<>());
@@ -46,7 +50,7 @@ public class BorrowingService {
 
 
         if (member.getBorrowedBooks().size() >= maxBorrowLimit) {
-            throw new IllegalArgumentException("Member has reached the borrow limit");
+            throw new MaxLimitException();
         }
 
         BorrowedBook borrowedBook = new BorrowedBook(book, member);
@@ -61,7 +65,7 @@ public class BorrowingService {
         List<BorrowedBook> borrowedBooks = borrowedBookRepository.findByMemberIdAndBookId(memberId, bookId);
 
         if (borrowedBooks.isEmpty()) {
-            throw new IllegalArgumentException("No borrowed book found for this member and book");
+            throw new NoBorrowedBookException();
         }
 
         BorrowedBook borrowedBook = borrowedBooks.get(0);
@@ -75,7 +79,7 @@ public class BorrowingService {
 
     public List<BorrowedBook> getBooksBorrowedByMemberName(String memberName) {
         Member member = memberRepository.findByName(memberName)
-                .orElseThrow(() -> new MemberNotFoundException("Member not found"));
+                .orElseThrow(MemberNotFoundException::new);
 
         return borrowedBookRepository.findByMemberName(member.getName());
     }

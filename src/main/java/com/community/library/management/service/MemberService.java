@@ -4,6 +4,7 @@ package com.community.library.management.service;
 import com.community.library.management.dto.MemberDTO;
 import com.community.library.management.exception.MemberNotDeletableException;
 import com.community.library.management.exception.MemberNotFoundException;
+import com.community.library.management.mapper.MemberMapper;
 import com.community.library.management.model.Member;
 import com.community.library.management.repository.MemberRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,30 +12,36 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Optional;
 
 @Service
 public class MemberService {
 
+    private final MemberRepository memberRepository;
+    private final MemberMapper memberMapper;
+
     @Autowired
-    private MemberRepository memberRepository;
+    public MemberService(MemberRepository memberRepository, MemberMapper memberMapper) {
+        this.memberRepository = memberRepository;
+        this.memberMapper = memberMapper;
+    }
 
     public List<Member> findAll() {
         return memberRepository.findAll();
     }
 
-    public Optional<Member> findById(Long id) {
-        return memberRepository.findById(id);
+    public Member findById(Long id) {
+        return memberRepository.findById(id)
+                .orElseThrow(MemberNotFoundException::new);
     }
 
-    public Member createMember(Member member) {
-        member.setMembershipDate(LocalDate.now());
-        return memberRepository.save(member);
+    public Member createMember(MemberDTO memberDTO) {
+        memberDTO.setMembershipDate(LocalDate.now());
+        return memberRepository.save(memberMapper.toEntity(memberDTO));
     }
 
-    public Member updateMember (Long memberId, MemberDTO memberDTO) {
+    public Member updateMember(Long memberId, MemberDTO memberDTO) {
         Member member = memberRepository.findById(memberId)
-                .orElseThrow(() -> new MemberNotFoundException("Member not found"));
+                .orElseThrow(MemberNotFoundException::new);
 
         member.setName(memberDTO.getName());
         return memberRepository.save(member);
@@ -42,9 +49,9 @@ public class MemberService {
 
     public void deleteMember(Long id) {
         Member member = memberRepository.findById(id)
-                .orElseThrow(() -> new MemberNotFoundException("Member not found"));
+                .orElseThrow(MemberNotFoundException::new);
         if (!member.getBorrowedBooks().isEmpty()) {
-            throw new MemberNotDeletableException("Member cannot be deleted because they have borrowed books");
+            throw new MemberNotDeletableException();
         }
         memberRepository.deleteById(id);
     }

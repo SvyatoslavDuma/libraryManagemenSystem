@@ -23,35 +23,32 @@ public class MemberHtmlController {
     public String getAllMembers(Model model) {
         List<Member> members = memberService.findAll();
         model.addAttribute("members", members);
-        return "members"; // шаблон Thymeleaf/Freemarker
+        return "members";
     }
 
     @GetMapping("/{id}")
     public String getMemberById(@PathVariable Long id, Model model) {
-        Member member = memberService.findById(id)
-                .orElseThrow(() -> new MemberNotFoundException("Member not found"));
+        Member member = memberService.findById(id);
         model.addAttribute("member", member);
-        return "member-detail"; // шаблон Thymeleaf/Freemarker
+        return "member-detail";
     }
 
     @GetMapping("/new")
     public String showCreateForm(Model model) {
         model.addAttribute("member", new MemberDTO());
-        return "create-member"; // шаблон для форми створення
+        return "create-member";
     }
 
     @PostMapping
-    public String createMember(@ModelAttribute Member member) {
-        memberService.createMember(member);
+    public String createMember(@ModelAttribute MemberDTO memberDTO) {
+        memberService.createMember(memberDTO);
         return "redirect:/members";
     }
 
     @GetMapping("/{id}/edit")
     public String showUpdateForm(@PathVariable Long id, Model model) {
-        Member member = memberService.findById(id)
-                .orElseThrow(() -> new MemberNotFoundException("Member not found"));
-        model.addAttribute("member", member);
-        return "edit-member"; // шаблон для форми редагування
+        Member member = memberService.findById(id);
+        return "edit-member";
     }
 
     @PostMapping("/{id}")

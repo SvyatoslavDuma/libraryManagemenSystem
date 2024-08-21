@@ -4,6 +4,7 @@ package com.community.library.management.serviceTest;
 import com.community.library.management.dto.MemberDTO;
 import com.community.library.management.exception.MemberNotDeletableException;
 import com.community.library.management.exception.MemberNotFoundException;
+import com.community.library.management.mapper.MemberMapper;
 import com.community.library.management.model.BorrowedBook;
 import com.community.library.management.model.Member;
 import com.community.library.management.repository.MemberRepository;
@@ -22,6 +23,8 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 public class MemberServiceTest {
+    @Mock
+    private MemberMapper memberMapper;
 
     @Mock
     private MemberRepository memberRepository;
@@ -39,10 +42,10 @@ public class MemberServiceTest {
         Member member = new Member("Test Member");
         when(memberRepository.findById(1L)).thenReturn(Optional.of(member));
 
-        Optional<Member> foundMember = memberService.findById(1L);
+        Member foundMember = memberService.findById(1L);
 
-        assertTrue(foundMember.isPresent());
-        assertEquals("Test Member", foundMember.get().getName());
+        assertEquals(member,foundMember);
+        assertEquals("Test Member", foundMember.getName());
         verify(memberRepository, times(1)).findById(1L);
     }
 
@@ -50,20 +53,27 @@ public class MemberServiceTest {
     public void testFindByIdNotFound() {
         when(memberRepository.findById(1L)).thenReturn(Optional.empty());
 
-        Optional<Member> foundMember = memberService.findById(1L);
+        assertThrows(MemberNotFoundException.class, () -> {
+            memberService.findById(1L);
+        });
 
-        assertFalse(foundMember.isPresent());
         verify(memberRepository, times(1)).findById(1L);
     }
     @Test
     public void testCreateMember() {
         Member member = new Member("Test Member");
+
         when(memberRepository.save(any(Member.class))).thenReturn(member);
 
-        Member savedMember = memberService.createMember(member);
+        MemberDTO memberDTO = new MemberDTO("Test Member");
 
-        assertEquals("Test Member", savedMember.getName());
-        assertNotNull(savedMember.getMembershipDate());
+        when(memberMapper.toEntity(any(MemberDTO.class))).thenReturn(member);
+
+        Member savedMemberDTO = memberService.createMember(memberDTO);
+
+        assertEquals("Test Member", savedMemberDTO.getName());
+        assertNotNull(savedMemberDTO.getMembershipDate());
+
         verify(memberRepository, times(1)).save(member);
     }
     @Test
